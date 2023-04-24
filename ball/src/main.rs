@@ -16,7 +16,8 @@ pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<Score>()
-        .init_resource::<StartSpawnTimer>()
+        .init_resource::<StarSpawnTimer>()
+        .init_resource::<EnemySpawnTimer>()
         .add_startup_system(spawn_player)
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_enemies)
@@ -30,6 +31,8 @@ pub fn main() {
         .add_system(update_score)
         .add_system(tick_start)
         .add_system(tick_spawn_star)
+        .add_system(tick_enemy_timer)
+        .add_system(spawn_enemy_over_timer)
         .run();
 }
 
@@ -50,14 +53,27 @@ pub struct Score {
 }
 
 #[derive(Resource)]
-pub struct StartSpawnTimer {
+pub struct StarSpawnTimer {
     timer: Timer,
 }
 
-impl Default for StartSpawnTimer {
+impl Default for StarSpawnTimer {
     fn default() -> Self {
         Self {
             timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct EnemySpawnTimer {
+    timer: Timer,
+}
+
+impl Default for EnemySpawnTimer {
+    fn default() -> Self {
+        Self {
+            timer: Timer::from_seconds(5.0, TimerMode::Repeating),
         }
     }
 }
@@ -297,12 +313,12 @@ pub fn update_score(score: Res<Score>) {
     }
 }
 
-pub fn tick_start(mut timer: ResMut<StartSpawnTimer>, time: Res<Time>) {
+pub fn tick_start(mut timer: ResMut<StarSpawnTimer>, time: Res<Time>) {
     timer.timer.tick(time.delta());
 }
 
 pub fn tick_spawn_star(
-    timer: Res<StartSpawnTimer>,
+    timer: Res<StarSpawnTimer>,
     mut cmd: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
@@ -319,6 +335,34 @@ pub fn tick_spawn_star(
                 ..default()
             },
             Star {},
+        ));
+    }
+}
+
+pub fn tick_enemy_timer(mut timer: ResMut<EnemySpawnTimer>, time: Res<Time>) {
+    timer.timer.tick(time.delta());
+}
+
+pub fn spawn_enemy_over_timer(
+    mut cmd: Commands,
+    timer: Res<EnemySpawnTimer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    asset_server: Res<AssetServer>,
+) {
+    if timer.timer.finished() {
+        let window = window_query.get_single().unwrap();
+
+        let x = random::<f32>() * window.width();
+        let y = random::<f32>() * window.height();
+        cmd.spawn((
+            SpriteBundle {
+                transform: Transform::from_xyz(x, y, 0.0),
+                texture: asset_server.load("sprites/ball_red_large.png"),
+                ..default()
+            },
+            Enemy {
+                direction: Vec2::new(random(), random()).normalize(),
+            },
         ));
     }
 }

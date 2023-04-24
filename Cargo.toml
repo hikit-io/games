@@ -3,6 +3,7 @@ members = [
     "ball"
 ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+resolver = "2"
 
 [workspace.dependencies]
 bevy = "0.10.1"
